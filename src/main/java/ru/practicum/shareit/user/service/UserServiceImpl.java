@@ -1,77 +1,74 @@
 package ru.practicum.shareit.user.service;
 
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.user.User;
+import ru.practicum.shareit.user.dto.UserCreateDto;
 import ru.practicum.shareit.user.dto.UserMapper;
+import ru.practicum.shareit.user.dto.UserResponseDto;
+import ru.practicum.shareit.user.dto.UserUpdateDto;
 import ru.practicum.shareit.user.repo.UserRepository;
-import ru.practicum.shareit.user.dto.UserDto;
-import ru.practicum.shareit.user.exceptions.UserEmailAlreadyExistsException;
-import ru.practicum.shareit.user.exceptions.UserNotFoundException;
+import ru.practicum.shareit.exception.NotFoundException;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
     private final UserRepository repository;
 
     @Override
-    public List<UserDto> getAllUsers() {
-        return repository.findAll().stream()
-                .map(UserMapper::toUserDto)
+    public List<UserResponseDto> getAllUsers() {
+        return repository.findAll()
+                .stream()
+                .map(UserMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public UserDto getUserById(Long userId) {
+    public UserResponseDto getUserById(Long userId) {
         User user = findUserByIdOrThrow(userId);
-        return UserMapper.toUserDto(user);
+        return UserMapper.toResponseDto(user);
     }
 
     @Override
+    @Transactional
     public void deleteUser(Long userId) {
-        findUserByIdOrThrow(userId);
-        repository.deleteById(userId);
+        User existringUser = findUserByIdOrThrow(userId);
+        repository.delete(existringUser);
     }
 
     @Override
-    public UserDto createUser(UserDto userDto) {
-        if (repository.findByEmail(userDto.getEmail()) != null) {
-            throw new UserEmailAlreadyExistsException("Email " + userDto.getEmail() + " already exists.");
+    @Transactional
+    public UserResponseDto createUser(UserCreateDto userDto) {
+        if (repository.findByEmail(userDto.getEmail()).isPresent()) {
+            throw new ConflictException("User with email " + userDto.getEmail() + " already exists");
         }
-        User user = UserMapper.toUser(userDto);
-        User savedUser = repository.save(user);
-        return UserMapper.toUserDto(savedUser);
+        User savedUser = repository.save(UserMapper.toCreateUser(userDto));
+        return UserMapper.toResponseDto(savedUser);
     }
 
     @Override
-    public UserDto updateUser(Long userId, UserDto userDto) {
+    @Transactional
+    public UserResponseDto updateUser(Long userId, UserUpdateDto userDto) {
         User existingUser = findUserByIdOrThrow(userId);
 
-        if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
-            User userWithSameEmail = repository.findByEmail(userDto.getEmail());
-            if (userWithSameEmail != null && !Objects.equals(userWithSameEmail.getId(), userId)) {
-                throw new UserEmailAlreadyExistsException("Email " + userDto.getEmail() + " already exists.");
-            }
-            existingUser.setEmail(userDto.getEmail());
-        }
+        if (repository.findByEmail(userDto.getEmail()).isPresent() &&
+                !userDto.getEmail().equals(existingUser.getEmail()))
+            throw new ConflictException("User with email " + userDto.getEmail() + " already exists");
 
-        if (userDto.getName() != null && !userDto.getName().isBlank()) {
-            existingUser.setName(userDto.getName());
-        }
-
+        if (userDto.getName() != null) existingUser.setName(userDto.getName());
+        if (userDto.getEmail() != null) existingUser.setEmail(userDto.getEmail());
         User updatedUser = repository.save(existingUser);
-        return UserMapper.toUserDto(updatedUser);
+        return UserMapper.toResponseDto(updatedUser);
     }
 
     private User findUserByIdOrThrow(Long userId) {
-        User user = repository.findById(userId);
-        if (user == null) {
-            throw new UserNotFoundException("User with id = " + userId + " not found");
-        }
-        return user;
+        return repository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found with id " + userId));
     }
 }
