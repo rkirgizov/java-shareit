@@ -1,6 +1,9 @@
 package ru.practicum.shareit.booking;
 
+import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import ru.practicum.shareit.booking.enumeration.Status;
 import ru.practicum.shareit.item.Item;
 import ru.practicum.shareit.user.User;
@@ -8,12 +11,34 @@ import ru.practicum.shareit.user.User;
 import java.time.LocalDateTime;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Entity
+@Table(name = "bookings", indexes = {
+        @Index(name = "idx_booker_id", columnList = "booker_id"),
+        @Index(name = "idx_item_id", columnList = "item_id")
+})
 public class Booking {
-    private Long id;                  // уникальный идентификатор бронирования
-    private LocalDateTime start;      // дата и время начала бронирования
-    private LocalDateTime end;        // дата и время конца бронирования
-    private Item item;                // вещь, которую пользователь бронирует
-    private User booker;              // пользователь, который осуществляет бронирование
-    private Status status;            // статус бронирования
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "start_date", nullable = false)
+    private LocalDateTime start;
+
+    @Column(name = "end_date", nullable = false)
+    private LocalDateTime end;
+
+    @ManyToOne
+    @JoinColumn(name = "item_id", nullable = false)
+    private Item item;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booker_id", nullable = false)
+    private User booker;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private Status status;
 }

@@ -3,18 +3,19 @@ package ru.practicum.shareit.user.dto;
 import ru.practicum.shareit.user.User;
 
 public class UserMapper {
-    public static UserDto toUserDto(User user) {
-        return new UserDto(
-                user.getId(),
-                user.getEmail(),
-                user.getName()
-        );
+    public static UserResponseDto toResponseDto(User user) {
+        UserResponseDto dto = new UserResponseDto();
+        dto.setId(user.getId());
+        dto.setEmail(user.getEmail());
+        dto.setName(user.getName());
+        return dto;
     }
 
-    public static User toUser(UserDto userDto) {
+    public static User toCreateUser(UserCreateDto dto) {
         User user = new User();
-        user.setEmail(userDto.getEmail());
-        user.setName(userDto.getName());
+        user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
         return user;
     }
+
 }
