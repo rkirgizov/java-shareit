@@ -9,7 +9,7 @@ services:
       - server
     environment:
       - SHAREIT_SERVER_URL=http://server:9090
-      #- TZ=Europe/Moscow
+      - TZ=Europe/Moscow
 
   server:
     build: server
@@ -24,7 +24,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=shareit
       - SPRING_DATASOURCE_PASSWORD=shareit
       #Tempo kelamor
-      #- TZ=Europe/Moscow
+      - TZ=Europe/Moscow
 
 
   db:
